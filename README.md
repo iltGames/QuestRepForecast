@@ -25,7 +25,7 @@ Update `CHANGELOG.txt` and bump `## Version` in `ForeverQuestRep.toc` on `main`.
 
 The CurseForge upload uses the repository Actions secret `CURSEFORGE_API_TOKEN`. Add an [author API token](https://authors.curseforge.com/#/settings/api-tokens) in [GitHub Actions secrets](https://github.com/iltGames/QuestRepForecast/settings/secrets/actions). CurseForge applies its normal processing and moderation to every upload. The workflow skips v0.4.0 because that release was uploaded manually.
 
-Use **Run workflow** with **Verify only** selected to validate the ZIP without publishing. If an upload loses its response, check the CurseForge Files page before retrying to avoid submitting a duplicate.
+Use **Run workflow** with **Verify only** selected to validate the ZIP and confirm the CurseForge token can look up the target game version without publishing. If an upload loses its response, check the CurseForge Files page before retrying to avoid submitting a duplicate.
 
 ## License
 

@@ -7,12 +7,14 @@ forever_version_type=88568
 status_context="CurseForge/$RELEASE_TAG"
 status_endpoint="repos/$GITHUB_REPOSITORY/statuses/$RELEASE_COMMIT"
 
-# A retry after a confirmed upload should not create another CurseForge file.
-receipt=$(gh api --paginate "repos/$GITHUB_REPOSITORY/commits/$RELEASE_COMMIT/statuses" \
-    --jq ".[] | select(.context == \"$status_context\" and .state == \"success\") | .target_url")
-if [[ -n "$receipt" ]]; then
-    printf 'Already uploaded to CurseForge: %s\n' "$receipt"
-    exit 0
+if [[ "${VERIFY_ONLY:-false}" != true ]]; then
+    # A retry after a confirmed upload should not create another CurseForge file.
+    receipt=$(gh api --paginate "repos/$GITHUB_REPOSITORY/commits/$RELEASE_COMMIT/statuses" \
+        --jq ".[] | select(.context == \"$status_context\" and .state == \"success\") | .target_url")
+    if [[ -n "$receipt" ]]; then
+        printf 'Already uploaded to CurseForge: %s\n' "$receipt"
+        exit 0
+    fi
 fi
 if [[ -z "${CURSEFORGE_API_TOKEN:-}" ]]; then
     echo '::error::Add the CURSEFORGE_API_TOKEN repository secret to enable CurseForge uploads.'
@@ -30,6 +32,10 @@ versions=$(curl --fail --silent --show-error --max-time 30 -H "X-Api-Token: $CUR
 version_id=$(jq -er --arg version "$game_version" --argjson flavor "$forever_version_type" \
     '[.[] | select(.gameVersionTypeID == $flavor and .name == $version) | .id] | unique |
     if length == 1 then .[0] else error("Expected one WoW Forever game version matching " + $version) end' <<< "$versions")
+if [[ "${VERIFY_ONLY:-false}" == true ]]; then
+    printf 'CurseForge API confirmed WoW Forever %s (version ID %s). No upload attempted.\n' "$game_version" "$version_id"
+    exit 0
+fi
 
 archive="QuestRepForecast-${RELEASE_TAG#v}.zip"
 gh release download "$RELEASE_TAG" --pattern "$archive" --dir "$RUNNER_TEMP"

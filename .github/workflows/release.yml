@@ -10,7 +10,7 @@ on:
   workflow_dispatch:
     inputs:
       verify_only:
-        description: Validate the release package without publishing
+        description: Validate the package and CurseForge authentication without publishing
         type: boolean
         default: true
 
@@ -68,6 +68,7 @@ jobs:
           done < <(grep '\.lua$' ForeverQuestRep.toc)
 
           if [[ "$VERIFY_ONLY" == true ]]; then
+            printf 'tag=%s\ncommit=%s\n' "$tag" "$commit" >> "$GITHUB_OUTPUT"
             echo "Verified $archive. Publishing skipped."
             exit 0
           fi
@@ -92,9 +93,11 @@ jobs:
           printf 'tag=%s\ncommit=%s\nchecksum=%s\n' "$tag" "$commit" "${checksum%% *}" >> "$GITHUB_OUTPUT"
 
   curseforge:
-    name: Publish to CurseForge
+    name: Verify or publish to CurseForge
     needs: release
-    if: needs.release.outputs.tag != '' && needs.release.outputs.tag != 'v0.4.0'
+    if: >-
+      needs.release.outputs.tag != '' &&
+      (needs.release.outputs.tag != 'v0.4.0' || (github.event_name == 'workflow_dispatch' && inputs.verify_only))
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -105,11 +108,12 @@ jobs:
           ref: ${{ needs.release.outputs.commit }}
           persist-credentials: false
 
-      - name: Upload the GitHub release archive
+      - name: Check CurseForge authentication or upload the release archive
         env:
           GH_TOKEN: ${{ github.token }}
           CURSEFORGE_API_TOKEN: ${{ secrets.CURSEFORGE_API_TOKEN }}
           RELEASE_TAG: ${{ needs.release.outputs.tag }}
           RELEASE_COMMIT: ${{ needs.release.outputs.commit }}
           RELEASE_CHECKSUM: ${{ needs.release.outputs.checksum }}
+          VERIFY_ONLY: ${{ github.event_name == 'workflow_dispatch' && inputs.verify_only }}
         run: bash scripts/Publish-CurseForge.sh
