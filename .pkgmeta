@@ -1,0 +1,9 @@
+package-as: ForeverQuestRep
+manual-changelog: CHANGELOG.txt
+
+required-dependencies:
+  - questie
+
+ignore:
+  - artwork
+  - scripts

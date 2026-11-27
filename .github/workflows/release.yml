@@ -1,0 +1,51 @@
+name: Release
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - ForeverQuestRep.toc
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: quest-rep-forecast-release
+  cancel-in-progress: false
+
+jobs:
+  release:
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+
+      - name: Package and publish the TOC version
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          version="$(sed -n 's/^## Version: //p' ForeverQuestRep.toc)"
+          if [[ ! "$version" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+            echo 'Expected a version in major.minor.patch format in ForeverQuestRep.toc' >&2
+            exit 1
+          fi
+          tag="v$version"
+          if gh release view "$tag" >/dev/null 2>&1; then
+            echo "Release $tag already exists."
+            exit 0
+          fi
+          archive="QuestRepForecast-$version.zip"
+          git archive --format=zip --prefix=ForeverQuestRep/ --output="$archive" HEAD -- \
+            ForeverQuestRep.toc '*.lua' README.md LICENSE LICENSE-QuestXPForecast.txt NOTICE.md Polestar-NOTICE.md
+          unzip -t "$archive"
+          while IFS= read -r entry; do
+            unzip -p "$archive" "ForeverQuestRep/$entry" >/dev/null
+          done < <(grep '\.lua$' ForeverQuestRep.toc)
+          gh release create "$tag" "$archive" --target "$GITHUB_SHA" --title "Quest Rep Forecast $tag" --notes-file CHANGELOG.txt

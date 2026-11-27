@@ -1,0 +1,11 @@
+## Interface: 16001
+## Title: Quest Rep Forecast
+## Notes: Preview quest reputation for the watched faction.
+## Version: 0.4.0
+## Dependencies: Questie
+## SavedVariables: ForeverQuestRepDB
+
+TurnInData.lua
+SessionStats.lua
+ForecastSettings.lua
+ForeverQuestRep.lua

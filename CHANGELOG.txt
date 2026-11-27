@@ -1,0 +1,6 @@
+Quest Rep Forecast v0.4.0
+
+- Preview reputation from ready quests, in-progress quests, and complete bag turn-ins for the watched faction.
+- Apply the active Legacy Diplomat bonus and exclude cloth hand-ins.
+- Show session reputation per hour, average reputation per kill, and estimated time to the next standing.
+- Customize forecast colors, opacity, font size, tracked quests, and pinned bar text. Reopen setup with /qrfconfig.
