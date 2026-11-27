@@ -305,7 +305,7 @@ local function ShowForecastTooltip(tracker)
     end
     if GameTooltip:IsShown() and hoveredTracker ~= tracker then return end
     if GameTooltip:GetOwner() ~= tracker then
-        GameTooltip:SetOwner(tracker, "ANCHOR_TOP")
+        GameTooltip_SetDefaultAnchor(GameTooltip, tracker)
     end
     hoveredTracker = tracker
     GameTooltip:SetText(faction.name)

@@ -1,7 +1,7 @@
 ## Interface: 16001
 ## Title: Quest Rep Forecast
 ## Notes: Preview quest reputation for the watched faction.
-## Version: 0.4.1
+## Version: 0.4.2
 ## Dependencies: Questie
 ## SavedVariables: ForeverQuestRepDB
 
