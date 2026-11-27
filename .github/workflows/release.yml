@@ -34,7 +34,7 @@ jobs:
       commit: ${{ steps.package.outputs.commit }}
       checksum: ${{ steps.package.outputs.checksum }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
         with:
           persist-credentials: false
 
@@ -103,7 +103,7 @@ jobs:
       contents: read
       statuses: write
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
         with:
           ref: ${{ needs.release.outputs.commit }}
           persist-credentials: false
