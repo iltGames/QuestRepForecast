@@ -5,7 +5,14 @@ on:
     branches: [main]
     paths:
       - ForeverQuestRep.toc
+  release:
+    types: [published]
   workflow_dispatch:
+    inputs:
+      verify_only:
+        description: Validate the release package without publishing
+        type: boolean
+        default: true
 
 permissions:
   contents: read
@@ -16,19 +23,28 @@ concurrency:
 
 jobs:
   release:
-    if: github.ref == 'refs/heads/main'
+    if: >-
+      github.ref == 'refs/heads/main' ||
+      (github.event_name == 'release' && !github.event.release.prerelease)
     runs-on: ubuntu-latest
     permissions:
       contents: write
+    outputs:
+      tag: ${{ steps.package.outputs.tag }}
+      commit: ${{ steps.package.outputs.commit }}
+      checksum: ${{ steps.package.outputs.checksum }}
     steps:
       - uses: actions/checkout@v4
         with:
           persist-credentials: false
 
       - name: Package and publish the TOC version
+        id: package
         shell: bash
         env:
           GH_TOKEN: ${{ github.token }}
+          RELEASE_TAG: ${{ github.event.release.tag_name }}
+          VERIFY_ONLY: ${{ github.event_name == 'workflow_dispatch' && inputs.verify_only }}
         run: |
           set -euo pipefail
           version="$(sed -n 's/^## Version: //p' ForeverQuestRep.toc)"
@@ -37,15 +53,63 @@ jobs:
             exit 1
           fi
           tag="v$version"
-          if gh release view "$tag" >/dev/null 2>&1; then
-            echo "Release $tag already exists."
-            exit 0
+          commit="$(git rev-parse HEAD)"
+          if [[ -n "$RELEASE_TAG" && "$RELEASE_TAG" != "$tag" ]]; then
+            echo "Release tag $RELEASE_TAG does not match TOC version $tag." >&2
+            exit 1
           fi
           archive="QuestRepForecast-$version.zip"
           git archive --format=zip --prefix=ForeverQuestRep/ --output="$archive" HEAD -- \
             ForeverQuestRep.toc '*.lua' README.md LICENSE LICENSE-QuestXPForecast.txt NOTICE.md Polestar-NOTICE.md
           unzip -t "$archive"
+          bash -n scripts/Publish-CurseForge.sh
           while IFS= read -r entry; do
             unzip -p "$archive" "ForeverQuestRep/$entry" >/dev/null
           done < <(grep '\.lua$' ForeverQuestRep.toc)
-          gh release create "$tag" "$archive" --target "$GITHUB_SHA" --title "Quest Rep Forecast $tag" --notes-file CHANGELOG.txt
+
+          if [[ "$VERIFY_ONLY" == true ]]; then
+            echo "Verified $archive. Publishing skipped."
+            exit 0
+          fi
+
+          if release=$(gh release view "$tag" --json isDraft,isPrerelease,assets); then
+            if jq -e '.isDraft or .isPrerelease' <<< "$release" >/dev/null; then
+              echo "Release $tag is a draft or prerelease. Publishing skipped."
+              exit 0
+            fi
+            git fetch --no-tags origin "refs/tags/$tag"
+            if [[ "$(git rev-parse 'FETCH_HEAD^{commit}')" != "$commit" ]]; then
+              echo "Release $tag already exists for a different commit. Bump the TOC version to publish this commit."
+              exit 0
+            fi
+            if ! jq -e --arg name "$archive" 'any(.assets[]; .name == $name)' <<< "$release" >/dev/null; then
+              gh release upload "$tag" "$archive"
+            fi
+          else
+            gh release create "$tag" "$archive" --target "$commit" --title "Quest Rep Forecast $tag" --notes-file CHANGELOG.txt
+          fi
+          checksum=$(sha256sum "$archive")
+          printf 'tag=%s\ncommit=%s\nchecksum=%s\n' "$tag" "$commit" "${checksum%% *}" >> "$GITHUB_OUTPUT"
+
+  curseforge:
+    name: Publish to CurseForge
+    needs: release
+    if: needs.release.outputs.tag != '' && needs.release.outputs.tag != 'v0.4.0'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      statuses: write
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ needs.release.outputs.commit }}
+          persist-credentials: false
+
+      - name: Upload the GitHub release archive
+        env:
+          GH_TOKEN: ${{ github.token }}
+          CURSEFORGE_API_TOKEN: ${{ secrets.CURSEFORGE_API_TOKEN }}
+          RELEASE_TAG: ${{ needs.release.outputs.tag }}
+          RELEASE_COMMIT: ${{ needs.release.outputs.commit }}
+          RELEASE_CHECKSUM: ${{ needs.release.outputs.checksum }}
+        run: bash scripts/Publish-CurseForge.sh

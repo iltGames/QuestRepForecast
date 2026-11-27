@@ -19,6 +19,14 @@ Bag turn-ins are estimated from item quantities in [Polestar forever-db 2026.11.
 
 Install [Questie](https://www.curseforge.com/wow/addons/questie), then download the ZIP from [GitHub Releases](https://github.com/iltGames/QuestRepForecast/releases) and extract `ForeverQuestRep` into `_forever_/Interface/AddOns`.
 
+## Releases
+
+Update `CHANGELOG.txt` and bump `## Version` in `ForeverQuestRep.toc` on `main`. The [Release workflow](https://github.com/iltGames/QuestRepForecast/actions/workflows/release.yml) creates the GitHub release and submits its ZIP to CurseForge project `1833973` with Questie marked as a required dependency. Publishing a stable GitHub release manually also runs the workflow. Its tag must match the TOC version.
+
+The CurseForge upload uses the repository Actions secret `CURSEFORGE_API_TOKEN`. Add an [author API token](https://authors.curseforge.com/#/api-tokens) in [GitHub Actions secrets](https://github.com/iltGames/QuestRepForecast/settings/secrets/actions). CurseForge applies its normal processing and moderation to every upload. The workflow skips v0.4.0 because that release was uploaded manually.
+
+Use **Run workflow** with **Verify only** selected to validate the ZIP without publishing. If an upload loses its response, check the CurseForge Files page before retrying to avoid submitting a duplicate.
+
 ## License
 
 GNU General Public License v3. See [LICENSE](LICENSE) and [data and code notices](NOTICE.md).
