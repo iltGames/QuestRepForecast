@@ -224,10 +224,14 @@ local function UpdateRepBarText(tracker, hovering)
     tracker:SetBarText(text)
 end
 
-local function ShowRepBarTextIfEnabled(tracker)
+local function UpdateRepBarTextVisibility(tracker)
     local frame = tracker.OverlayFrame
-    if addon.settings.alwaysShowRepText and frame and frame.Text then
+    if not frame or not frame.Text then return end
+    if addon.settings.alwaysShowRepText then
         frame.Text:Show()
+    elseif CharacterFrame and CharacterFrame:IsShown() then
+        -- Ignore the character pane's shared text lock while honoring the bar's own lock.
+        frame.Text:SetShown(GetCVarBool("xpBarText") or tracker.textLocked == true)
     end
 end
 
@@ -359,7 +363,7 @@ local function AttachOverlay(tracker)
     bar:HookScript("OnShow", DrawForecast)
     if tracker.UpdateCurrentText then hooksecurefunc(tracker, "UpdateCurrentText", UpdateRepBarText) end
     if tracker.UpdateTextVisibility then
-        hooksecurefunc(tracker, "UpdateTextVisibility", ShowRepBarTextIfEnabled)
+        hooksecurefunc(tracker, "UpdateTextVisibility", UpdateRepBarTextVisibility)
         tracker:UpdateTextVisibility()
     end
     tracker:HookScript("OnEnter", function(self)
